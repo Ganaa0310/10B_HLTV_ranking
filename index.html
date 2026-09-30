@@ -45,6 +45,26 @@ input.num{width:64px;text-align:center}
 .add button{background:var(--acc);color:#111;font-weight:700;padding:0 16px;height:40px}
 .empty{padding:30px;text-align:center;color:var(--mute)}
 .note{color:var(--mute);font-size:12px;text-align:center;margin-top:14px;min-height:16px}
+  .image-container {
+            display: inline-block;          /* Shrink-wraps the container to the image size plus padding */
+            background-color: #000000;      /* Black background */
+            padding: 20px;                  /* Padding around the image */
+            border-radius: 20px;            /* Curved edges (increase for rounder corners) */
+            
+            /* Centering the container on the page */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 50px auto;              /* Centers block element horizontally */
+            max-width: fit-content;
+        }
+
+        .image-container img {
+            display: block;
+            max-width: 100%;                /* Makes the image responsive */
+            height: auto;
+            border-radius: 10px;            /* Optional: curves the image edges too */
+        }
 </style>
 </head>
 <body>
@@ -150,7 +170,8 @@ async function refresh() {
 })();
 </script>
  <div class="image-container">
-  <img src="table.png" >
-</div>
+        <h1>More info</h1>
+        <img src="table.png" alt="Onoonii zadargaa">
+    </div>
 </body>
 </html>

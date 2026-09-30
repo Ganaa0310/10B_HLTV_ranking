@@ -3,11 +3,12 @@
 const crypto = require('crypto');
 
 const URL_BASE = () => process.env.SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/players';
-const headers = () => ({
-  apikey: process.env.SUPABASE_SERVICE_KEY,
-  Authorization: 'Bearer ' + process.env.SUPABASE_SERVICE_KEY,
-  'Content-Type': 'application/json',
-});
+const headers = () => {
+  const k = process.env.SUPABASE_SERVICE_KEY;
+  const h = { apikey: k, 'Content-Type': 'application/json' };
+  if (!k.startsWith('sb_')) h.Authorization = 'Bearer ' + k;
+  return h;
+};
 
 function passwordOk(given) {
   const a = Buffer.from(String(given || ''));

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS2 Class Ranking</title>
+<style>
+:root{--bg:#0d1016;--card:#161b24;--line:#232b38;--text:#e8ecf2;--mute:#8592a6;--acc:#f5a524;--acc2:#4aa8ff;--gold:#f5c542;--silver:#c3ccd8;--bronze:#d08a52}
+@media (prefers-color-scheme:light){:root{--bg:#f1f3f7;--card:#fff;--line:#dde2ea;--text:#141a24;--mute:#5d6b80;--acc:#d98600;--acc2:#1f7ad6}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+background-image:radial-gradient(600px 300px at 80% -50px,color-mix(in srgb,var(--acc) 18%,transparent),transparent),radial-gradient(500px 300px at 0 0,color-mix(in srgb,var(--acc2) 14%,transparent),transparent)}
+.wrap{max-width:760px;margin:0 auto;padding:28px 16px 60px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:22px}
+.tag{font-size:12px;letter-spacing:.2em;color:var(--acc);font-weight:700}
+h1{margin:4px 0 0;font-size:clamp(26px,7vw,40px);letter-spacing:-.02em;line-height:1}
+h1 span{color:var(--acc)}
+.pill{font-size:12px;color:var(--mute);background:none;border:1px solid var(--line);padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.pill.on{color:var(--acc);border-color:var(--acc)}
+.podium{display:grid;grid-template-columns:1fr 1.15fr 1fr;gap:10px;align-items:end;margin-bottom:18px}
+.pod{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 8px;text-align:center;border-top:3px solid var(--c);min-width:0}
+.pod.p1{padding-top:26px;padding-bottom:20px;box-shadow:0 0 30px -8px var(--c)}
+.pod .n{font-size:12px;color:var(--c);font-weight:800;letter-spacing:.1em}
+.pod .nm{font-weight:700;margin:6px 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pod .sc{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.rk{font-weight:800;color:var(--mute)}
+.who{min-width:0}
+.who b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:4px;background:var(--line);border-radius:9px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc2),var(--acc));border-radius:9px}
+.sc2{font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
+.ctl{display:flex;gap:6px;align-items:center}
+button,input{font:inherit;color:var(--text)}
+.ctl button,.add button{background:var(--line);border:0;border-radius:8px;min-width:32px;height:32px;cursor:pointer}
+.ctl button:hover{background:color-mix(in srgb,var(--acc) 35%,var(--line))}
+.del{color:#ff6b6b}
+input{background:var(--bg);border:1px solid var(--line);border-radius:8px;height:32px;padding:0 8px}
+input.num{width:64px;text-align:center}
+.add{display:flex;gap:8px;margin-bottom:14px}
+.add input{flex:1;min-width:0;height:40px}
+.add button{background:var(--acc);color:#111;font-weight:700;padding:0 16px;height:40px}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+.note{color:var(--mute);font-size:12px;text-align:center;margin-top:14px;min-height:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><div class="tag">CS2 · CLASS LEADERBOARD</div><h1>Class <span>Ranking</span></h1></div>
+    <button class="pill" id="mode">Admin login</button>
+  </header>
+  <div id="app"></div>
+</div>
+<script>
+let players = [], pw = sessionStorage.getItem('pw') || '', admin = false, status = '', timer = null, editing = false;
+const app = document.getElementById('app'), modeBtn = document.getElementById('mode');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sorted = () => [...players].sort((a, b) => b.score - a.score);
+
+async function api(action, extra) {
+  const isList = action === 'list';
+  const r = await fetch('/api/ranking?action=' + action, {
+    method: isList ? 'GET' : 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: isList ? undefined : JSON.stringify({ password: pw, ...extra })
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+function render() {
+  const s = sorted(), max = Math.max(1, s.length ? s[0].score : 1);
+  modeBtn.textContent = admin ? 'Admin · log out' : 'Admin login';
+  modeBtn.classList.toggle('on', admin);
+  let h = '';
+  if (admin) h += '<div class="add"><input id="newName" placeholder="New player nickname" maxlength="24"><button id="addBtn">+ Add</button></div>';
+  if (s.length >= 3) {
+    const col = { 0: 'var(--gold)', 1: 'var(--silver)', 2: 'var(--bronze)' };
+    h += '<div class="podium">' + [1, 0, 2].map(i =>
+      `<div class="pod p${i + 1}" style="--c:${col[i]}"><div class="n">#${i + 1}</div><div class="nm">${esc(s[i].name)}</div><div class="sc">${s[i].score}</div></div>`).join('') + '</div>';
+  }
+  h += '<div class="list">' + (s.length ? '' : '<div class="empty">No players yet.</div>');
+  s.forEach((p, i) => {
+    h += `<div class="row"><div class="rk">${i + 1}</div><div class="who"><b>${esc(p.name)}</b><div class="bar"><i style="width:${Math.max(2, Math.round(Math.max(0, p.score) / max * 100))}%"></i></div></div>`;
+    h += admin
+      ? `<div class="ctl"><button data-a="dn" data-id="${p.id}">−</button><input class="num" type="number" data-id="${p.id}" value="${p.score}"><button data-a="up" data-id="${p.id}">+</button><button class="del" data-a="del" data-id="${p.id}">✕</button></div>`
+      : `<div class="sc2">${p.score}</div>`;
+    h += '</div>';
+  });
+  h += `</div><div class="note">${status}</div>`;
+  app.innerHTML = h;
+  const b = document.getElementById('addBtn'); if (b) b.onclick = addPlayer;
+  const n = document.getElementById('newName'); if (n) n.onkeydown = e => { if (e.key === 'Enter') addPlayer(); };
+  app.querySelectorAll('input.num').forEach(el => {
+    el.onfocus = () => editing = true;
+    el.onblur = () => editing = false;
+  });
+}
+
+function addPlayer() {
+  const v = document.getElementById('newName').value.trim();
+  if (!v) return;
+  players.push({ id: crypto.randomUUID(), name: v.slice(0, 24), score: 1000 });
+  changed();
+}
+app.addEventListener('click', e => {
+  const t = e.target.closest('button[data-a]'); if (!t || !admin) return;
+  const p = players.find(x => x.id === t.dataset.id), a = t.dataset.a;
+  if (a === 'up') p.score += 10; else if (a === 'dn') p.score -= 10;
+  else if (a === 'del') players = players.filter(x => x !== p);
+  changed();
+});
+app.addEventListener('change', e => {
+  if (!e.target.classList.contains('num') || !admin) return;
+  players.find(x => x.id === e.target.dataset.id).score = Math.round(Number(e.target.value) || 0);
+  changed();
+});
+
+function changed() {
+  status = 'Saving…'; render();
+  clearTimeout(timer);
+  timer = setTimeout(async () => {
+    try { await api('save', { players }); status = 'Saved'; }
+    catch { status = 'Save failed (wrong password?)'; }
+    render();
+  }, 500);
+}
+
+modeBtn.onclick = async () => {
+  if (admin) { admin = false; pw = ''; sessionStorage.removeItem('pw'); return render(); }
+  const p = prompt('Admin password:'); if (!p) return;
+  pw = p;
+  try { await api('login'); admin = true; sessionStorage.setItem('pw', pw); }
+  catch { pw = ''; alert('Wrong password'); }
+  render();
+};
+
+async function refresh() {
+  if (editing || timer) return;
+  try { players = (await api('list')).players; render(); } catch {}
+}
+(async () => {
+  await refresh();
+  if (pw) { try { await api('login'); admin = true; } catch { pw = ''; } render(); }
+  setInterval(refresh, 15000);
+})();
+</script>
+</body>
+</html>
